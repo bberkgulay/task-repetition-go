@@ -1,12 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/bberkgulay/task-repetition-go/controllers"
 	"github.com/bberkgulay/task-repetition-go/db"
 	"github.com/bberkgulay/task-repetition-go/utils"
 	"github.com/gorilla/mux"
@@ -21,9 +21,14 @@ func main() {
 	}
 
 	database := db.Connect()
-	fmt.Println(database)
+	controller := controllers.Controller{DB: database}
 
 	router := mux.NewRouter()
+
+	router.HandleFunc("/auth/register", controller.Register()).Methods("POST")
+	router.HandleFunc("/auth/login", controller.Login()).Methods("POST")
+
+	router.Use(controller.LoginControl)
 
 	srv := &http.Server{
 		Handler:      utils.Headers(router), // Set header to routes
