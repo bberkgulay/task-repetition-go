@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/bberkgulay/task-repetition-go/models"
 	"github.com/bberkgulay/task-repetition-go/utils"
@@ -186,84 +187,83 @@ func (c Controller) DeleteTask() http.HandlerFunc {
 	}
 }
 
-// func (c Controller) AddUser(db *sql.DB) http.HandlerFunc {
-// 	return func(w http.ResponseWriter, r *http.Request) {
-// 		var book models.Book
-// 		var error models.Error
+func (c Controller) CompleteTask() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 
-// 		json.NewDecoder(r.Body).Decode(&book)
+		var task models.Task
+		var error models.Error
 
-// 		if book.Author == "" || book.Title == "" || book.Year == "" {
-// 			error.Message = "Enter missing fields."
-// 			utils.SendError(w, http.StatusBadRequest, error)
-// 			return
-// 		}
+		params := mux.Vars(r)
 
-// 		bookRepo := bookRepository.BookRepository{}
-// 		bookID, err := bookRepo.AddBook(db, book)
+		objectId, err := primitive.ObjectIDFromHex(params["id"])
+		if err != nil {
+			error.Message = "Incorrect ID value."
+			utils.SendError(w, http.StatusBadRequest, error)
+			return
+		}
 
-// 		if err != nil {
-// 			error.Message = "Server Error"
-// 			utils.SendError(w, http.StatusInternalServerError, error)
-// 			return
-// 		}
+		userId, err := primitive.ObjectIDFromHex(r.Header.Get("userID"))
+		if err != nil {
+			error.Message = "Error while getting user."
+			utils.SendError(w, http.StatusBadRequest, error)
+			return
+		}
 
-// 		w.Header().Set("Content-Type", "text/plain")
-// 		utils.SendSuccess(w, bookID)
-// 	}
-// }
+		filter := bson.D{{"_id", objectId}, {Key: "user", Value: userId}}
+		findError := c.DB.Collection("tasks").FindOne(context.TODO(), filter).Decode(&task)
 
-// func (c Controller) UpdateBook(db *sql.DB) http.HandlerFunc {
-// 	return func(w http.ResponseWriter, r *http.Request) {
-// 		var book models.Book
-// 		var error models.Error
+		if findError != nil {
+			error.Message = "Server Error."
+			utils.SendError(w, http.StatusInternalServerError, error)
+			return
+		}
 
-// 		json.NewDecoder(r.Body).Decode(&book)
+		if !task.CompletedDay.IsZero() {
+			error.Message = "Task is already completed."
+			utils.SendError(w, http.StatusBadRequest, error)
+			return
+		}
 
-// 		if book.Author == "" || book.Title == "" || book.Year == "" {
-// 			error.Message = "Enter missing fields."
-// 			utils.SendError(w, http.StatusBadRequest, error)
-// 			return
-// 		}
+		//TODO
+		// if task.RepetitionBeginDay > time.Now() {
+		// 	error.Message = "Task is already completed."
+		// 	utils.SendError(w, http.StatusBadRequest, error)
+		// 	return
+		// }
 
-// 		bookRepo := bookRepository.BookRepository{}
-// 		rowsAffected, err := bookRepo.UpdateBook(db, book)
+		nextRepetitionType, err := c.GetNextRepetitionType(task.RepetitionType)
+		if err != nil {
+			error.Message = "Error"
+			utils.SendError(w, http.StatusBadRequest, error)
+			return
+		}
 
-// 		if err != nil {
-// 			error.Message = "Server error"
-// 			utils.SendError(w, http.StatusInternalServerError, error)
-// 			return
-// 		}
+		message := "Successful"
 
-// 		w.Header().Set("Content-Type", "text/plain")
-// 		utils.SendSuccess(w, rowsAffected)
-// 	}
-// }
+		if nextRepetitionType == nil { //there is no repetition day so user completed the task
+			task.CompletedDay = time.Now()
+			message = "Task is completed successfully."
+		} else {
+			task.RepetitionBeginDay = time.Now().AddDate(0, 0, nextRepetitionType.Day)
+			task.RepetitionType = nextRepetitionType.ID
+			message = "Successful"
+		}
 
-// func (c Controller) RemoveBook(db *sql.DB) http.HandlerFunc {
-// 	return func(w http.ResponseWriter, r *http.Request) {
-// 		var error models.Error
-// 		params := mux.Vars(r)
+		filter = bson.D{{Key: "_id", Value: objectId}, {Key: "user", Value: userId}}
+		result, err := c.DB.Collection("tasks").UpdateOne(
+			context.TODO(),
+			filter,
+			bson.D{
+				{"$set", task},
+			})
+		_ = result
 
-// 		bookRepo := bookRepository.BookRepository{}
+		if err != nil {
+			error.Message = "Server error"
+			utils.SendError(w, http.StatusInternalServerError, error)
+			return
+		}
 
-// 		id, err := strconv.Atoi(params["id"])
-
-// 		if err != nil {
-// 			error.Message = "Incorrect id."
-// 			utils.SendError(w, http.StatusBadRequest, error)
-// 			return
-// 		}
-
-// 		rowsAffected, err := bookRepo.RemoveBook(db, id)
-
-// 		if err != nil {
-// 			error.Message = "Server error"
-// 			utils.SendError(w, http.StatusInternalServerError, error)
-// 			return
-// 		}
-
-// 		w.Header().Set("Content-Type", "text/plain")
-// 		utils.SendSuccess(w, rowsAffected)
-// 	}
-// }
+		utils.SendSuccess(w, message)
+	}
+}
