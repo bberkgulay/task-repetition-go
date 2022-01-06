@@ -224,9 +224,9 @@ func (c Controller) CompleteTask() http.HandlerFunc {
 			return
 		}
 
-		//TODO
+		//TODO begin day control
 		// if task.RepetitionBeginDay > time.Now() {
-		// 	error.Message = "Task is already completed."
+		// 	error.Message = ""
 		// 	utils.SendError(w, http.StatusBadRequest, error)
 		// 	return
 		// }
