@@ -28,6 +28,12 @@ func main() {
 	router.HandleFunc("/auth/register", controller.Register()).Methods("POST")
 	router.HandleFunc("/auth/login", controller.Login()).Methods("POST")
 
+	router.HandleFunc("/tasks", controller.GetTasks()).Methods("GET")
+	router.HandleFunc("/tasks", controller.AddTask()).Methods("POST")
+	router.HandleFunc("/tasks/{id}", controller.GetTask()).Methods("GET")
+	router.HandleFunc("/tasks/{id}", controller.UpdateTask()).Methods("PUT")
+	router.HandleFunc("/tasks/{id}", controller.DeleteTask()).Methods("DELETE")
+
 	router.Use(controller.LoginControl)
 
 	srv := &http.Server{
