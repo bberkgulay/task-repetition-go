@@ -34,6 +34,10 @@ func main() {
 	router.HandleFunc("/tasks/{id}", controller.UpdateTask()).Methods("PUT")
 	router.HandleFunc("/tasks/{id}", controller.DeleteTask()).Methods("DELETE")
 
+	router.HandleFunc("/tasks/{task_id}/notes", controller.AddNote()).Methods("POST")
+	router.HandleFunc("/tasks/{task_id}/notes", controller.GetNotes()).Methods("GET")
+	router.HandleFunc("/notes/{id}", controller.DeleteNote()).Methods("DELETE")
+
 	router.Use(controller.LoginControl)
 
 	srv := &http.Server{
