@@ -12,9 +12,10 @@ The user first adds the task that interests for user to the application and take
 
 ## Tech Stack
 
-Go, MongoDB, Heroku, Postman
-
-Deployed on [Heroku](https://taskrepetition.herokuapp.com/api/v1)
+Go for backend 
+MongoDB for DB 
+Heroku for deployment 
+Postman for API test and Documentation
 
 ## Run Locally
 
