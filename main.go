@@ -25,6 +25,7 @@ func main() {
 
 	router := mux.NewRouter()
 
+	// endpoints are defined and mapped with functions.
 	router.HandleFunc("/auth/register", controller.Register()).Methods("POST")
 	router.HandleFunc("/auth/login", controller.Login()).Methods("POST")
 

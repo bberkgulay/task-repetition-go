@@ -12,6 +12,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// @route       POST /api/v1/tasks/{task_id}/notes
+// @access      Private
+// @description Adds notes for task.
 func (c Controller) AddNote() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var note models.Note
@@ -25,9 +28,10 @@ func (c Controller) AddNote() http.HandlerFunc {
 			return
 		}
 
+		//Getting user from header for owner control.
 		userId, hexError := primitive.ObjectIDFromHex(r.Header.Get("userID"))
 		if hexError != nil {
-			error.Message = "Error occured getting user."
+			error.Message = "Error occurred getting user."
 			utils.SendError(w, http.StatusBadRequest, error)
 			return
 		}
@@ -43,12 +47,11 @@ func (c Controller) AddNote() http.HandlerFunc {
 		}
 		note.Task = taskId
 
-		//task kullanıcının mı?
 		filter := bson.D{{Key: "user", Value: userId}, {Key: "_id", Value: taskId}}
 		taskCountOfUser, findError := c.DB.Collection("tasks").CountDocuments(context.TODO(), filter)
 
 		if taskCountOfUser == 0 {
-			error.Message = "Error"
+			error.Message = "There is no task with this Task ID of user"
 			utils.SendError(w, http.StatusBadRequest, error)
 			return
 		}
@@ -70,14 +73,18 @@ func (c Controller) AddNote() http.HandlerFunc {
 	}
 }
 
+// @route       GET /api/v1/tasks/{task_id}/notes
+// @access      Private
+// @description Returns notes of task.
 func (c Controller) GetNotes() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var error models.Error
 		var notes []models.Note
 
+		//Getting user from header for owner control.
 		userId, hexError := primitive.ObjectIDFromHex(r.Header.Get("userID"))
 		if hexError != nil {
-			error.Message = "Error occured about notes."
+			error.Message = "Error occurred about notes."
 			utils.SendError(w, http.StatusBadRequest, error)
 			return
 		}
@@ -111,11 +118,15 @@ func (c Controller) GetNotes() http.HandlerFunc {
 	}
 }
 
+// @route       GET /api/v1/notes/{id}
+// @access      Private
+// @description Deletes note by id with owner control.
 func (c Controller) DeleteNote() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var error models.Error
 		params := mux.Vars(r)
 
+		//Getting user from header for owner control.
 		userId, err := primitive.ObjectIDFromHex(r.Header.Get("userID"))
 		if err != nil {
 			error.Message = "Error while getting user."
@@ -135,7 +146,7 @@ func (c Controller) DeleteNote() http.HandlerFunc {
 		result := c.DB.Collection("notes").FindOneAndDelete(context.TODO(), filter).Err()
 
 		if result != nil {
-			error.Message = "No document to delete"
+			error.Message = "No note to delete"
 			utils.SendError(w, http.StatusBadRequest, error)
 			return
 		}

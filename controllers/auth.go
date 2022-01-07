@@ -12,6 +12,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+// @route       POST /api/v1/auth/login
+// @access      Public
 func (c Controller) Login() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var user models.User
@@ -39,6 +41,8 @@ func (c Controller) Login() http.HandlerFunc {
 	}
 }
 
+// @route       POST /api/v1/auth/register
+// @access      Public
 func (c Controller) Register() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var user models.User
@@ -87,11 +91,12 @@ func (c Controller) Register() http.HandlerFunc {
 	}
 }
 
+// @description Middleware for authentication of endpoints.
 func (c Controller) LoginControl(h http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		if strings.Contains(r.URL.Path, "/auth/") || strings.Contains(r.URL.Path, "/swagger/") {
+		if strings.Contains(r.URL.Path, "/auth/") {
 			h.ServeHTTP(w, r)
 		} else {
 			username, password, ok := r.BasicAuth()
@@ -115,6 +120,7 @@ func (c Controller) LoginControl(h http.Handler) http.Handler {
 	})
 }
 
+//@description Authorisation control of user if authorised, user id will be added to header.
 func isAuthorised(username string, password string, db *mongo.Database, r *http.Request) bool {
 	var user models.User
 

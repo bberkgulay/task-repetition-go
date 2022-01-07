@@ -13,6 +13,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// @route       POST /api/v1/tasks
+// @access      Private
+// @description Adds task for user.
 func (c Controller) AddTask() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var task models.Task
@@ -26,9 +29,10 @@ func (c Controller) AddTask() http.HandlerFunc {
 			return
 		}
 
+		//Getting user from header.
 		userId, hexError := primitive.ObjectIDFromHex(r.Header.Get("userID"))
 		if hexError != nil {
-			error.Message = "Error occured getting user."
+			error.Message = "Error occurred getting user."
 			utils.SendError(w, http.StatusBadRequest, error)
 			return
 		}
@@ -46,17 +50,22 @@ func (c Controller) AddTask() http.HandlerFunc {
 	}
 }
 
+// @route       GET /api/v1/tasks
+// @access      Private
+// @description Returns tasks of user.
 func (c Controller) GetTasks() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var error models.Error
 		var tasks []models.Task
 
+		//Getting user from header.
 		userId, hexError := primitive.ObjectIDFromHex(r.Header.Get("userID"))
 		if hexError != nil {
-			error.Message = "Error occured about user."
+			error.Message = "Error occurred about user."
 			utils.SendError(w, http.StatusBadRequest, error)
 			return
 		}
+
 		filter := bson.D{{Key: "user", Value: userId}}
 
 		cursor, err := c.DB.Collection("tasks").Find(context.TODO(), filter)
@@ -77,6 +86,9 @@ func (c Controller) GetTasks() http.HandlerFunc {
 	}
 }
 
+// @route       GET /api/v1/tasks/{id}
+// @access      Private
+// @description Gets task by id.
 func (c Controller) GetTask() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -92,7 +104,15 @@ func (c Controller) GetTask() http.HandlerFunc {
 			return
 		}
 
-		filter := bson.D{{"_id", objectId}}
+		//Getting user from header for owner control.
+		userId, err := primitive.ObjectIDFromHex(r.Header.Get("userID"))
+		if err != nil {
+			error.Message = "Error while getting user."
+			utils.SendError(w, http.StatusBadRequest, error)
+			return
+		}
+
+		filter := bson.D{{Key: "_id", Value: objectId}, {Key: "user", Value: userId}}
 		findError := c.DB.Collection("tasks").FindOne(context.TODO(), filter).Decode(&task)
 
 		if findError != nil {
@@ -105,6 +125,9 @@ func (c Controller) GetTask() http.HandlerFunc {
 	}
 }
 
+// @route       PUT /api/v1/tasks/{id}
+// @access      Private
+// @description Updates task by id with owner control.
 func (c Controller) UpdateTask() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var task models.Task
@@ -127,6 +150,7 @@ func (c Controller) UpdateTask() http.HandlerFunc {
 			return
 		}
 
+		//Getting user from header for owner control.
 		userId, err := primitive.ObjectIDFromHex(r.Header.Get("userID"))
 		if err != nil {
 			error.Message = "Error while getting user."
@@ -154,6 +178,9 @@ func (c Controller) UpdateTask() http.HandlerFunc {
 	}
 }
 
+// @route       DELETE /api/v1/tasks/{id}
+// @access      Private
+// @description Deletes task by id with owner control.
 func (c Controller) DeleteTask() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var error models.Error
@@ -166,6 +193,7 @@ func (c Controller) DeleteTask() http.HandlerFunc {
 			return
 		}
 
+		//Getting user from header for owner control.
 		userId, err := primitive.ObjectIDFromHex(r.Header.Get("userID"))
 		if err != nil {
 			error.Message = "Error while getting user."
@@ -178,7 +206,7 @@ func (c Controller) DeleteTask() http.HandlerFunc {
 		result := c.DB.Collection("tasks").FindOneAndDelete(context.TODO(), filter).Err()
 
 		if result != nil {
-			error.Message = "No document to delete"
+			error.Message = "No task to delete"
 			utils.SendError(w, http.StatusBadRequest, error)
 			return
 		}
@@ -187,6 +215,9 @@ func (c Controller) DeleteTask() http.HandlerFunc {
 	}
 }
 
+// @route       PUT /api/v1/tasks/{id}/complete
+// @access      Private
+// @description Completes task and finds suitable repetition type and repetition date.
 func (c Controller) CompleteTask() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -240,10 +271,12 @@ func (c Controller) CompleteTask() http.HandlerFunc {
 
 		message := "Successful"
 
-		if nextRepetitionType == nil { //there is no repetition day so user completed the task
+		//no next repetition day means the user has completed the task.
+		if nextRepetitionType == nil {
 			task.CompletedDay = time.Now()
 			message = "Task is completed successfully."
 		} else {
+			//Sets next repetition begin date and type.
 			task.RepetitionBeginDay = time.Now().AddDate(0, 0, nextRepetitionType.Day)
 			task.RepetitionType = nextRepetitionType.ID
 			message = "Successful"
