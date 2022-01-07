@@ -12,10 +12,10 @@ The user first adds the task that interests for user to the application and take
 
 ## Tech Stack
 
-Go for backend 
-MongoDB for DB 
-Heroku for deployment 
-Postman for API test and Documentation
+* Go for backend  
+* MongoDB for database 
+* Heroku for deployment
+* Postman for api test and documentation
 
 ## Run Locally
 
